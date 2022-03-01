@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const { connectDb } = require("./dbConnect");
 
 exports.createUser = (req, res) => {
@@ -12,11 +13,11 @@ exports.createUser = (req, res) => {
     email: req.body.email.toLowerCase(),
     password: req.body.password,
     isAdmin: false,
-    userRate: 5,
+    userRole: 5,
   };
 
   const db = connectDb();
-  db.collection("user")
+  db.collection("users")
     .add(newUser)
     .then((doc) => {
       const user = {
@@ -25,7 +26,8 @@ exports.createUser = (req, res) => {
         isAdmin: false,
         userRole: 5,
       };
-      //TODO: create a JWT and end back to token
+
+      const token = jwt.sign(user, "doNotShareYourSecret");
       res.status(201).send({
         success: true,
         message: "Account created",
@@ -74,6 +76,32 @@ exports.loginUser = (req, res) => {
         sucess: true,
         message: "Login successful",
         token: users[0],
+      });
+    })
+    .catch((err) =>
+      res.status(500).send({
+        success: false,
+        message: err.message,
+        error: err,
+      })
+    );
+};
+
+exports.getUsers = (req, res) => {
+  const db = connectDb();
+  db.collection("users")
+    .get()
+    .then((snapshot) => {
+      const users = snapshot.docs.map((doc) => {
+        let user = doc.data();
+        user.id = doc.id;
+        user.password = undefined;
+        return user;
+      });
+      res.send({
+        success: true,
+        message: "Users returned",
+        users,
       });
     })
     .catch((err) =>
