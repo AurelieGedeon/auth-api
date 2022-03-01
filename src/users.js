@@ -31,7 +31,7 @@ exports.createUser = (req, res) => {
       res.status(201).send({
         success: true,
         message: "Account created",
-        token: user,
+        token,
       });
     })
     .catch((err) =>
@@ -72,10 +72,11 @@ exports.loginUser = (req, res) => {
         return user;
       });
 
+      const token = jwt.sign(users[0], "doNotShareYourSecret");
       res.send({
         sucess: true,
         message: "Login successful",
-        token: users[0],
+        token,
       });
     })
     .catch((err) =>
@@ -88,7 +89,24 @@ exports.loginUser = (req, res) => {
 };
 
 exports.getUsers = (req, res) => {
+  if (!req.headers.authorization) {
+    return res.status(403).send({
+      success: false,
+      message: "No authorization token found",
+    });
+  }
+
+  const decode = jwt.verify(req.headers.authorization, "doNotShareYourSecret");
   const db = connectDb();
+
+  console.log(`NEW REQUEST BY ${decode.email}`);
+  if (decode.userRole > 5) {
+    return res.status(401).send({
+      sucess: false,
+      message: "Not authorized",
+    });
+  }
+
   db.collection("users")
     .get()
     .then((snapshot) => {
